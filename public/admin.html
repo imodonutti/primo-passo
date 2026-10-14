@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Primo Passo · Agenzia</title>
+  <link rel="stylesheet" href="/static/stile.css">
+</head>
+<body>
+  <header class="testata">
+    <div class="testata-dentro" style="max-width:1100px">
+      <div class="marchio">
+        <h1>Primo Passo<span class="punto">.</span></h1>
+        <span>pannello agenzia</span>
+        <span id="modalita" class="demo-badge nascosto"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="pagina">
+    <section class="pannello" id="accesso">
+      <h2>Accesso</h2>
+      <form class="campo-riga" id="form-accesso">
+        <input type="password" id="token" placeholder="Token agenzia (ADMIN_TOKEN)" autocomplete="current-password" required>
+        <button class="btn">Entra</button>
+      </form>
+    </section>
+
+    <div id="area" class="nascosto">
+      <section class="pannello">
+        <h2>Nuovo brief</h2>
+        <form class="campo-riga" id="form-nuova">
+          <input id="etichetta" placeholder="Cliente o progetto (solo per voi), es. Pasticceria Rossi" maxlength="120">
+          <button class="btn">Crea link</button>
+        </form>
+        <div id="link-creato" class="link-creato nascosto"></div>
+      </section>
+
+      <section class="pannello">
+        <h2>Brief</h2>
+        <div class="tabella-scorri">
+          <table>
+            <thead><tr><th>Cliente</th><th>Stato</th><th>Completo</th><th>Messaggi</th><th>Aggiornato</th></tr></thead>
+            <tbody id="righe"></tbody>
+          </table>
+        </div>
+        <p id="vuoto" class="nascosto" style="color:var(--inchiostro-2)">Nessun brief ancora: crea il primo link qui sopra.</p>
+      </section>
+
+      <section class="pannello nascosto" id="dettaglio">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+          <h2 id="det-titolo" style="margin:0;margin-right:auto"></h2>
+          <button class="btn secondario" id="apri-link">Apri link cliente</button>
+          <button class="btn secondario" id="scarica-md">Scarica .md</button>
+          <button class="btn" id="scarica-json">Scarica .json</button>
+        </div>
+        <div id="det-file" class="azioni" style="margin-bottom:12px"></div>
+        <div class="dettaglio">
+          <div class="md" id="det-md"></div>
+          <div class="trascr" id="det-trascr"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script src="/static/admin.js"></script>
+</body>
+</html>

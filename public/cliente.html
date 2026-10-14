@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Primo Passo · DinamoAI</title>
+  <link rel="stylesheet" href="/static/stile.css">
+</head>
+<body>
+  <header class="testata">
+    <div class="testata-dentro">
+      <div class="marchio">
+        <h1>Primo Passo<span class="punto">.</span></h1>
+        <span>il brief del tuo nuovo sito</span>
+        <span id="demo" class="demo-badge nascosto">DEMO</span>
+      </div>
+      <div class="avanzamento" aria-label="Avanzamento">
+        <div class="barra"><div id="barra"></div></div>
+        <div class="tappe" id="tappe"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="chat" id="chat" aria-live="polite"></main>
+
+  <div class="composer" id="composer">
+    <form id="modulo">
+      <button type="button" class="allega" id="allega" title="Carica un file" aria-label="Carica un file">📎</button>
+      <textarea id="testo" rows="1" placeholder="Scrivi la tua risposta…" maxlength="4000" aria-label="Messaggio"></textarea>
+      <button class="btn invia" id="invia" type="submit">Invia</button>
+    </form>
+    <p class="nota-privacy">Le risposte servono solo a preparare la proposta per il tuo sito.</p>
+  </div>
+  <input type="file" id="file" class="nascosto" accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf">
+
+  <script src="/static/cliente.js"></script>
+</body>
+</html>

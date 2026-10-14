@@ -1,0 +1,18 @@
+{
+  "name": "primo-passo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Intervista guidata dall'AI per raccogliere il brief di un nuovo sito - DinamoAI",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "multer": "^2.4.0"
+  }
+}
