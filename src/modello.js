@@ -10,7 +10,37 @@ class ErroreModello extends Error {
   }
 }
 
-async function chiamaGemini({ chiave, modello, sistema, contenuti, strumenti }) {
+const TEMPORANEO = new Set([429, 500, 503, 504]);
+const attesa = (ms) => new Promise((r) => setTimeout(r, ms));
+let sovraccaricoFino = 0;
+
+// Prova il modello principale con due nuovi tentativi sugli errori temporanei (sovraccarico),
+// poi il modello di riserva (GEMINI_FALLBACK_MODEL, predefinito gemini-2.5-flash; "none" per disattivarlo).
+async function chiamaGemini(opzioni) {
+  const riserva = process.env.GEMINI_FALLBACK_MODEL ?? 'gemini-2.5-flash';
+  const conRiserva = riserva && riserva !== 'none' && riserva !== opzioni.modello;
+  // Se il principale è appena risultato sovraccarico, per 2 minuti si passa subito alla riserva.
+  const saltaPrincipale = conRiserva && Date.now() < sovraccaricoFino;
+  const modelli = saltaPrincipale ? [riserva] : conRiserva ? [opzioni.modello, riserva] : [opzioni.modello];
+  let ultimo;
+  for (const [i, modello] of modelli.entries()) {
+    const tentativi = i === 0 && !saltaPrincipale ? 3 : 2;
+    for (let t = 0; t < tentativi; t++) {
+      try {
+        return await chiamaUnaVolta({ ...opzioni, modello });
+      } catch (e) {
+        ultimo = e;
+        if (!e.temporaneo) throw e;
+        if (modello === opzioni.modello && t === tentativi - 1) sovraccaricoFino = Date.now() + 120_000;
+        console.warn(`[modello] ${modello} tentativo ${t + 1}: ${e.message}`);
+        if (t < tentativi - 1) await attesa(1500 * 2 ** t);
+      }
+    }
+  }
+  throw ultimo;
+}
+
+async function chiamaUnaVolta({ chiave, modello, sistema, contenuti, strumenti }) {
   const corpo = {
     systemInstruction: { parts: [{ text: sistema }] },
     contents: contenuti,
@@ -27,16 +57,22 @@ async function chiamaGemini({ chiave, modello, sistema, contenuti, strumenti }) 
       signal: ctrl.signal,
     });
   } catch (e) {
-    throw new ErroreModello(`Rete: ${e.message}`, 'Non riesco a contattare il servizio in questo momento. Riprova tra poco.');
+    const err = new ErroreModello(`Rete: ${e.message}`, 'Non riesco a contattare il servizio in questo momento. Riprova tra poco.');
+    err.temporaneo = true;
+    throw err;
   } finally {
     clearTimeout(timer);
   }
   const dati = await risp.json().catch(() => ({}));
-  if (risp.status === 429) {
-    throw new ErroreModello('Limite di richieste raggiunto (429)', 'Sono un po\' sovraccarico in questo momento: riprova tra un minuto, la conversazione resta salvata.');
-  }
   if (!risp.ok) {
-    throw new ErroreModello(`Gemini ${risp.status}: ${dati.error?.message || 'errore'}`, 'Si è verificato un problema tecnico. Riprova tra poco.');
+    const e = new ErroreModello(
+      `Gemini ${modello} ${risp.status}: ${dati.error?.message || 'errore'}`,
+      TEMPORANEO.has(risp.status)
+        ? 'Il servizio è molto richiesto in questo momento: riprova tra un minuto, la conversazione resta salvata.'
+        : 'Si è verificato un problema tecnico. Riprova tra poco.'
+    );
+    e.temporaneo = TEMPORANEO.has(risp.status);
+    throw e;
   }
   const contenuto = dati.candidates?.[0]?.content;
   if (!contenuto?.parts?.length) {

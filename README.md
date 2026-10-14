@@ -30,6 +30,7 @@ Senza `GEMINI_API_KEY` l'app parte in **modalità DEMO**: un finto assistente po
 |---|---|
 | `GEMINI_API_KEY` | Chiave di Google AI Studio. Vuota = DEMO |
 | `GEMINI_MODEL` | Predefinito `gemini-3.8-flash` |
+| `GEMINI_FALLBACK_MODEL` | Predefinito `gemini-2.5-flash`. Sugli errori temporanei (429, 5xx) il principale viene ritentato 3 volte, poi si passa alla riserva per 2 minuti. `none` per disattivarlo |
 | `ADMIN_TOKEN` | Obbligatorio in produzione. Se manca ne viene generato uno a ogni avvio e stampato nei log |
 | `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_TOKEN` | Facoltativi. Alla conferma del brief viene inviato `{evento, brief, markdown}` con l'intestazione `X-Primo-Passo-Token` |
 | `DATA_DIR` | Cartella dei dati, nel container `/app/data` |
