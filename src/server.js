@@ -185,6 +185,13 @@ app.get('/api/admin/sessioni/:id', soloAgenzia, (req, res) => {
   res.json({ brief: briefJson(s), markdown: briefMarkdown(s), trascrizione: s.trascrizione });
 });
 
+app.delete('/api/admin/sessioni/:id', soloAgenzia, async (req, res) => {
+  const ok = await archivio.elimina(req.params.id);
+  if (!ok) return res.status(404).json({ errore: 'Sessione non trovata' });
+  console.log(`[admin] brief eliminato ${req.params.id.slice(0, 6)}…`);
+  res.json({ ok: true });
+});
+
 app.get('/api/admin/sessioni/:id/file/:salvato', soloAgenzia, (req, res) => {
   const s = archivio.leggi(req.params.id);
   const f = s?.file.find((x) => x.salvato === req.params.salvato);

@@ -72,10 +72,25 @@ function conSessione(id, fn) {
   return prossima;
 }
 
+// Elimina sessione e file caricati. Passa dalla coda per non scontrarsi con un messaggio in corso.
+function elimina(id) {
+  if (!valido(id)) return Promise.resolve(false);
+  const prec = code.get(id) || Promise.resolve();
+  const op = prec.catch(() => {}).then(() => {
+    if (!fs.existsSync(percorso(id))) return false;
+    fs.rmSync(percorso(id), { force: true });
+    fs.rmSync(path.join(FILE, id), { recursive: true, force: true });
+    return true;
+  });
+  code.set(id, op);
+  op.finally(() => { if (code.get(id) === op) code.delete(id); });
+  return op;
+}
+
 const cartellaFile = (id) => {
   const d = path.join(FILE, id);
   fs.mkdirSync(d, { recursive: true });
   return d;
 };
 
-module.exports = { nuova, leggi, salva, elenco, conSessione, cartellaFile, valido };
+module.exports = { nuova, leggi, salva, elenco, conSessione, cartellaFile, valido, elimina };

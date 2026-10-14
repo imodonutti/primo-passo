@@ -37,7 +37,7 @@
     for (const s of d.sessioni) {
       const tr = document.createElement('tr');
       tr.className = 'cliccabile';
-      tr.innerHTML = '<td></td><td><span class="stato"></span></td><td></td><td></td><td></td>';
+      tr.innerHTML = '<td></td><td><span class="stato"></span></td><td></td><td></td><td></td><td class="col-azioni"></td>';
       const td = tr.querySelectorAll('td');
       td[0].textContent = s.azienda || s.etichetta || '(senza nome)';
       if (s.azienda && s.etichetta && s.azienda !== s.etichetta) {
@@ -52,9 +52,42 @@
       td[2].textContent = `${s.percentuale}%`;
       td[3].textContent = s.messaggi;
       td[4].textContent = data(s.aggiornata);
+      td[5].appendChild(bottoneElimina(s.id, s.azienda || s.etichetta, true));
       tr.addEventListener('click', () => dettaglio(s.id));
       righe.appendChild(tr);
     }
+  }
+
+  // Eliminazione in due clic: il primo arma il pulsante ("Conferma?"), il secondo elimina.
+  function armaElimina(btn, id, testoNormale) {
+    btn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      if (!btn.dataset.armato) {
+        btn.dataset.armato = '1';
+        btn.textContent = 'Conferma?';
+        btn.classList.add('armato');
+        btn._timer = setTimeout(() => { delete btn.dataset.armato; btn.textContent = testoNormale; btn.classList.remove('armato'); }, 4000);
+        return;
+      }
+      clearTimeout(btn._timer);
+      btn.disabled = true;
+      const r = await api(`/api/admin/sessioni/${id}`, { method: 'DELETE' });
+      if (!r.ok) { btn.disabled = false; btn.textContent = 'Errore'; return; }
+      if (corrente?.id === id) { corrente = null; $('#dettaglio').classList.add('nascosto'); }
+      carica();
+    });
+  }
+
+  function bottoneElimina(id, nome, compatto) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn secondario elimina piccolo';
+    b.title = `Elimina il brief ${nome || ''}`.trim();
+    b.setAttribute('aria-label', b.title);
+    const testo = compatto ? '🗑' : 'Elimina';
+    b.textContent = testo;
+    armaElimina(b, id, testo);
+    return b;
   }
 
   function scarica(nome, contenuto, tipo) {
@@ -73,6 +106,10 @@
     $('#dettaglio').classList.remove('nascosto');
     $('#det-titolo').textContent = b.campi.nome_azienda?.valore || b.etichetta || 'Brief';
     $('#det-md').textContent = corrente.markdown;
+    const nuovoElimina = bottoneElimina(id, $('#det-titolo').textContent, false);
+    nuovoElimina.classList.remove('piccolo');
+    nuovoElimina.id = 'elimina-dettaglio';
+    $('#elimina-dettaglio').replaceWith(nuovoElimina);
     const tr = $('#det-trascr');
     tr.innerHTML = '';
     for (const m of corrente.trascrizione) {
