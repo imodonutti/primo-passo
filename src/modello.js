@@ -77,7 +77,10 @@ async function chiamaUnaVolta({ chiave, modello, sistema, contenuti, strumenti }
   const contenuto = dati.candidates?.[0]?.content;
   if (!contenuto?.parts?.length) {
     const motivo = dati.candidates?.[0]?.finishReason || dati.promptFeedback?.blockReason || 'vuota';
-    throw new ErroreModello(`Risposta vuota (${motivo})`, 'Non sono riuscito a formulare una risposta. Puoi riformulare?');
+    const e = new ErroreModello(`${modello}: risposta vuota (${motivo})`, 'Non sono riuscito a formulare una risposta. Puoi riformulare?');
+    // Chiamata a strumento mal formata: difetto occasionale del modello, si ritenta.
+    e.temporaneo = motivo === 'MALFORMED_FUNCTION_CALL';
+    throw e;
   }
   return { role: 'model', parts: contenuto.parts };
 }
