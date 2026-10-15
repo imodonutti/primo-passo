@@ -140,6 +140,8 @@ tr.cliccabile { cursor: pointer; } tr.cliccabile:hover td { background: var(--ca
 .trascr div { padding: 8px 10px; border-radius: 8px; background: var(--carta); white-space: pre-wrap; }
 .trascr div.cliente { background: var(--carta-2); }
 .trascr b { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--inchiostro-2); }
+.nota { font-size: 13px; color: var(--inchiostro-2); margin: -4px 0 12px; }
+.dettaglio-motore { font-size: 12px; color: var(--inchiostro-2); max-width: 420px; overflow-wrap: anywhere; }
 .col-azioni { width: 1%; text-align: right; }
 .btn.piccolo { padding: 4px 9px; font-size: 14px; font-weight: 500; border-radius: 8px; }
 .btn.elimina:hover, .btn.elimina.armato { color: #fff; background: #B3261E; border-color: #B3261E; }

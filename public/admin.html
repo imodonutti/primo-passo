@@ -38,6 +38,17 @@
       </section>
 
       <section class="pannello">
+        <h2>Motori AI</h2>
+        <p class="nota">In ordine di preferenza: ogni messaggio va al primo motore pronto. Le pause si azzerano al riavvio dell'app.</p>
+        <div class="tabella-scorri">
+          <table>
+            <thead><tr><th>Motore</th><th>Stato</th><th>Risposte</th><th>Errori</th><th>Dettaglio</th></tr></thead>
+            <tbody id="motori"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="pannello">
         <h2>Brief</h2>
         <div class="tabella-scorri">
           <table>
@@ -56,6 +67,7 @@
           <button class="btn secondario" id="scarica-md">Scarica .md</button>
           <button class="btn" id="scarica-json">Scarica .json</button>
         </div>
+        <p id="det-consumo" class="nota"></p>
         <div id="det-file" class="azioni" style="margin-bottom:12px"></div>
         <div class="dettaglio">
           <div class="md" id="det-md"></div>

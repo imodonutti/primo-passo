@@ -1,88 +1,11 @@
-// Chiamate al modello: Gemini via REST, oppure un modello finto ("demo") per provare l'app senza chiave.
+// Errore dei motori AI e modello finto ("demo") per provare l'app senza chiavi. I motori veri sono in motori.js.
 const { CAMPI, campiAttivi, stato } = require('./schema');
-
-const API = process.env.GEMINI_API_BASE || 'https://generativelanguage.googleapis.com/v1beta/models';
 
 class ErroreModello extends Error {
   constructor(messaggio, perUtente) {
     super(messaggio);
     this.perUtente = perUtente;
   }
-}
-
-const TEMPORANEO = new Set([429, 500, 503, 504]);
-const attesa = (ms) => new Promise((r) => setTimeout(r, ms));
-let sovraccaricoFino = 0;
-
-// Prova il modello principale con due nuovi tentativi sugli errori temporanei (sovraccarico),
-// poi il modello di riserva (GEMINI_FALLBACK_MODEL, predefinito gemini-2.5-flash; "none" per disattivarlo).
-async function chiamaGemini(opzioni) {
-  const riserva = process.env.GEMINI_FALLBACK_MODEL ?? 'gemini-2.5-flash';
-  const conRiserva = riserva && riserva !== 'none' && riserva !== opzioni.modello;
-  // Se il principale è appena risultato sovraccarico, per 2 minuti si passa subito alla riserva.
-  const saltaPrincipale = conRiserva && Date.now() < sovraccaricoFino;
-  const modelli = saltaPrincipale ? [riserva] : conRiserva ? [opzioni.modello, riserva] : [opzioni.modello];
-  let ultimo;
-  for (const [i, modello] of modelli.entries()) {
-    const tentativi = i === 0 && !saltaPrincipale ? 3 : 2;
-    for (let t = 0; t < tentativi; t++) {
-      try {
-        return await chiamaUnaVolta({ ...opzioni, modello });
-      } catch (e) {
-        ultimo = e;
-        if (!e.temporaneo) throw e;
-        if (modello === opzioni.modello && t === tentativi - 1) sovraccaricoFino = Date.now() + 120_000;
-        console.warn(`[modello] ${modello} tentativo ${t + 1}: ${e.message}`);
-        if (t < tentativi - 1) await attesa(1500 * 2 ** t);
-      }
-    }
-  }
-  throw ultimo;
-}
-
-async function chiamaUnaVolta({ chiave, modello, sistema, contenuti, strumenti }) {
-  const corpo = {
-    systemInstruction: { parts: [{ text: sistema }] },
-    contents: contenuti,
-    tools: [{ functionDeclarations: strumenti }],
-  };
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 60_000);
-  let risp;
-  try {
-    risp = await fetch(`${API}/${encodeURIComponent(modello)}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': chiave },
-      body: JSON.stringify(corpo),
-      signal: ctrl.signal,
-    });
-  } catch (e) {
-    const err = new ErroreModello(`Rete: ${e.message}`, 'Non riesco a contattare il servizio in questo momento. Riprova tra poco.');
-    err.temporaneo = true;
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
-  const dati = await risp.json().catch(() => ({}));
-  if (!risp.ok) {
-    const e = new ErroreModello(
-      `Gemini ${modello} ${risp.status}: ${dati.error?.message || 'errore'}`,
-      TEMPORANEO.has(risp.status)
-        ? 'Il servizio è molto richiesto in questo momento: riprova tra un minuto, la conversazione resta salvata.'
-        : 'Si è verificato un problema tecnico. Riprova tra poco.'
-    );
-    e.temporaneo = TEMPORANEO.has(risp.status);
-    throw e;
-  }
-  const contenuto = dati.candidates?.[0]?.content;
-  if (!contenuto?.parts?.length) {
-    const motivo = dati.candidates?.[0]?.finishReason || dati.promptFeedback?.blockReason || 'vuota';
-    const e = new ErroreModello(`${modello}: risposta vuota (${motivo})`, 'Non sono riuscito a formulare una risposta. Puoi riformulare?');
-    // Chiamata a strumento mal formata: difetto occasionale del modello, si ritenta.
-    e.temporaneo = motivo === 'MALFORMED_FUNCTION_CALL';
-    throw e;
-  }
-  return { role: 'model', parts: contenuto.parts };
 }
 
 // ---- Modello demo: segue lo schema campo per campo, senza AI. Serve solo a collaudare il flusso. ----
@@ -132,4 +55,4 @@ function chiamaDemo(sessione, contenuti) {
   return { role: 'model', parts: [{ text: domandaPer(prossimo) }] };
 }
 
-module.exports = { chiamaGemini, chiamaDemo, ErroreModello };
+module.exports = { chiamaDemo, ErroreModello };

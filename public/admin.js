@@ -29,8 +29,9 @@
     $('#accesso').classList.add('nascosto');
     $('#area').classList.remove('nascosto');
     const m = $('#modalita');
-    m.textContent = d.demo ? 'DEMO · nessuna chiave Gemini' : d.modello;
+    m.textContent = d.demo ? 'DEMO · nessun motore AI' : `${d.motori.filter((x) => x.stato === 'pronto').length} motori pronti`;
     m.classList.remove('nascosto');
+    mostraMotori(d.motori);
     const righe = $('#righe');
     righe.innerHTML = '';
     $('#vuoto').classList.toggle('nascosto', d.sessioni.length > 0);
@@ -90,6 +91,33 @@
     return b;
   }
 
+  function mostraMotori(motori) {
+    const tb = $('#motori');
+    tb.innerHTML = '';
+    if (!motori.length) {
+      tb.innerHTML = '<tr><td colspan="5">Nessun motore configurato (variabile MOTORI).</td></tr>';
+      return;
+    }
+    for (const x of motori) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td></td><td><span class="stato"></span></td><td></td><td></td><td class="dettaglio-motore"></td>';
+      const td = tr.querySelectorAll('td');
+      td[0].textContent = x.id;
+      const st = td[1].firstChild;
+      const fino = x.pausaFino ? new Date(x.pausaFino) : null;
+      const oggi = fino && fino.toDateString() === new Date().toDateString();
+      st.textContent = x.stato === 'in pausa'
+        ? `in pausa fino ${oggi ? 'alle' : 'al'} ${fino.toLocaleString('it-IT', oggi ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
+        : x.stato;
+      st.classList.add(x.stato === 'pronto' ? 'confermato' : x.stato === 'in pausa' ? 'da_confermare' : 'in_corso');
+      td[2].textContent = x.risposte;
+      td[3].textContent = x.errori;
+      td[4].textContent = x.motivo || x.ultimoErrore || '';
+      tr.title = x.ultimoUso ? `Ultima risposta: ${data(x.ultimoUso)}` : '';
+      tb.appendChild(tr);
+    }
+  }
+
   function scarica(nome, contenuto, tipo) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([contenuto], { type: tipo }));
@@ -116,10 +144,14 @@
       const d = document.createElement('div');
       d.className = m.chi;
       d.innerHTML = '<b></b>';
-      d.firstChild.textContent = m.chi;
+      d.firstChild.textContent = m.motore ? `${m.chi} · ${m.motore}` : m.chi;
       d.append(m.testo);
       tr.appendChild(d);
     }
+    const cons = Object.entries(corrente.consumo || {});
+    $('#det-consumo').textContent = cons.length
+      ? 'Consumo: ' + cons.map(([k, v]) => `${k} ${v.chiamate} chiamate, ${(v.token_in / 1000).toFixed(1)}k token in, ${(v.token_out / 1000).toFixed(1)}k out`).join(' · ')
+      : '';
     const df = $('#det-file');
     df.innerHTML = '';
     for (const f of b.file) {

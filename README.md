@@ -8,6 +8,7 @@ Il cliente riceve un link personale, chatta con l'assistente (può interrompere 
 
 - **Schema del brief** (`src/schema.js`): ogni campo ha valore, fonte (`cliente`, `dedotto`, `default`) e stato di conferma. L'intervista si chiude solo quando i campi obbligatori sono pieni e nessun dato dedotto resta da confermare. La sezione negozio online si attiva solo se il tipo di sito è e-commerce.
 - **Prompt e strumenti** (`src/prompt.js`): il prompt di sistema viene ricostruito a ogni turno con lo stato aggiornato del brief, quindi il modello non deve "ricordare" nulla. Strumenti: `aggiorna_brief`, `leggi_sito`, `mostra_stili`, `chiedi_file`, `concludi_intervista`.
+- **Motori** (`src/motori.js`): catena di fornitori (Gemini e compatibili OpenAI: OpenRouter, Groq). La conversazione resta nel formato Gemini ed è convertita al volo, quindi il motore può cambiare a metà intervista. Su 429/5xx il motore va in pausa per il tempo indicato dal fornitore (anche ore, se la quota giornaliera è finita) e si passa al successivo. Stato visibile nel pannello; nel dettaglio di ogni brief, motore per messaggio e token consumati.
 - **Ciclo** (`src/agente.js`): messaggio del cliente, chiamata al modello, esecuzione degli strumenti, nuova chiamata, fino alla risposta testuale (massimo 8 passi).
 - **Lettura siti** (`src/leggi-sito.js`): solo http/https su porte 80/443, blocca indirizzi interni e di rete locale, massimo 1,5 MB e 10 secondi, segue fino a 3 reindirizzamenti ricontrollandoli.
 - **Archivio** (`src/archivio.js`): un file JSON per sessione in `data/sessioni`, file caricati in `data/file/<sessione>`. Le operazioni sulla stessa sessione sono messe in coda.
@@ -28,9 +29,9 @@ Senza `GEMINI_API_KEY` l'app parte in **modalità DEMO**: un finto assistente po
 
 | Variabile | Note |
 |---|---|
-| `GEMINI_API_KEY` | Chiave di Google AI Studio. Vuota = DEMO |
-| `GEMINI_MODEL` | Predefinito `gemini-3.8-flash` |
-| `GEMINI_FALLBACK_MODEL` | Predefinito `gemini-2.5-flash`. Sugli errori temporanei (429, 5xx) il principale viene ritentato 3 volte, poi si passa alla riserva per 2 minuti. `none` per disattivarlo |
+| `MOTORI` | Catena di motori in ordine di preferenza, es. `openrouter:openai/gpt-oss-120b:free,groq:openai/gpt-oss-120b,gemini:gemini-3.8-flash`. Se manca: `GEMINI_MODEL` + `GEMINI_FALLBACK_MODEL` (configurazione precedente) |
+| `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `GROQ_API_KEY` | Chiavi dei fornitori. I motori senza chiave vengono saltati. Nessuna chiave = DEMO |
+| `OPENROUTER_DATA_COLLECTION` | `deny` (predefinito) esclude i fornitori che conservano o addestrano sui prompt; `allow` serve per molti modelli `:free`, solo per prove con dati inventati |
 | `ADMIN_TOKEN` | Obbligatorio in produzione. Se manca ne viene generato uno a ogni avvio e stampato nei log |
 | `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_TOKEN` | Facoltativi. Alla conferma del brief viene inviato `{evento, brief, markdown}` con l'intestazione `X-Primo-Passo-Token` |
 | `DATA_DIR` | Cartella dei dati, nel container `/app/data` |

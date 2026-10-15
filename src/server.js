@@ -6,6 +6,7 @@ const multer = require('multer');
 
 const archivio = require('./archivio');
 const { rispondi, modalitaDemo, config } = require('./agente');
+const { statoMotori } = require('./motori');
 const { SALUTO } = require('./prompt');
 const { stato, SEZIONI, campiAttivi } = require('./schema');
 const { briefMarkdown, briefJson } = require('./riepilogo');
@@ -161,7 +162,7 @@ function soloAgenzia(req, res, next) {
 app.get('/api/admin/sessioni', soloAgenzia, (req, res) => {
   res.json({
     demo: modalitaDemo(),
-    modello: config().modello,
+    motori: statoMotori(),
     sessioni: archivio.elenco().map((s) => ({
       id: s.id,
       etichetta: s.etichetta,
@@ -182,7 +183,7 @@ app.post('/api/admin/sessioni', soloAgenzia, (req, res) => {
 app.get('/api/admin/sessioni/:id', soloAgenzia, (req, res) => {
   const s = archivio.leggi(req.params.id);
   if (!s) return res.status(404).json({ errore: 'Sessione non trovata' });
-  res.json({ brief: briefJson(s), markdown: briefMarkdown(s), trascrizione: s.trascrizione });
+  res.json({ brief: briefJson(s), markdown: briefMarkdown(s), trascrizione: s.trascrizione, consumo: s.consumo || {} });
 });
 
 app.delete('/api/admin/sessioni/:id', soloAgenzia, async (req, res) => {
@@ -208,5 +209,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORTA, () => {
-  console.log(`Primo Passo in ascolto su :${PORTA} (${modalitaDemo() ? 'modalità DEMO, nessuna chiave Gemini' : `modello ${config().modello}`})`);
+  console.log(`Primo Passo in ascolto su :${PORTA} (${modalitaDemo() ? 'modalità DEMO, nessun motore AI configurato' : `motori: ${config().motori.join(' > ')}`})`);
 });

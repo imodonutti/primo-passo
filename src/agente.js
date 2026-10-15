@@ -1,21 +1,19 @@
 // Ciclo conversazionale: messaggio del cliente -> modello -> strumenti -> risposta.
 const { CAMPI, STILI, stato } = require('./schema');
 const { costruisciPrompt, STRUMENTI } = require('./prompt');
-const { chiamaGemini, chiamaDemo, ErroreModello } = require('./modello');
+const { chiamaDemo, ErroreModello } = require('./modello');
+const motori = require('./motori');
 const { leggiSito } = require('./leggi-sito');
 
 const MAX_PASSI = 8;
 const MAX_CONTENUTI = 120; // oltre, si tagliano i turni più vecchi (il brief resta nel prompt di sistema)
 
-function config() {
-  return {
-    chiave: process.env.GEMINI_API_KEY || '',
-    modello: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
-  };
+function modalitaDemo() {
+  return motori.elencoMotori().length === 0;
 }
 
-function modalitaDemo() {
-  return !config().chiave;
+function config() {
+  return { motori: motori.elencoMotori().map((m) => m.id) };
 }
 
 async function eseguiStrumento(sessione, nome, args, eventi) {
@@ -74,15 +72,17 @@ async function eseguiStrumento(sessione, nome, args, eventi) {
 }
 
 async function chiamaModello(sessione) {
-  const { chiave, modello } = config();
-  if (!chiave) return chiamaDemo(sessione, sessione.contenuti);
-  return chiamaGemini({
-    chiave,
-    modello,
-    sistema: costruisciPrompt(sessione),
-    contenuti: sessione.contenuti,
-    strumenti: STRUMENTI,
-  });
+  if (modalitaDemo()) return { risposta: chiamaDemo(sessione, sessione.contenuti), motore: 'demo', uso: { in: 0, out: 0 } };
+  return motori.chiama({ sistema: costruisciPrompt(sessione), contenuti: sessione.contenuti, strumenti: STRUMENTI });
+}
+
+// Consumo per motore nella sessione: serve a stimare il costo reale di un'intervista.
+function registraConsumo(sessione, motore, uso) {
+  sessione.consumo ||= {};
+  const c = (sessione.consumo[motore] ||= { chiamate: 0, token_in: 0, token_out: 0 });
+  c.chiamate++;
+  c.token_in += uso?.in || 0;
+  c.token_out += uso?.out || 0;
 }
 
 function tagliaStorico(sessione) {
@@ -106,11 +106,15 @@ async function rispondi(sessione, testoCliente) {
 
   for (let passo = 0; passo < MAX_PASSI; passo++) {
     let risposta;
+    let motore;
     try {
-      risposta = await chiamaModello(sessione);
+      const esito = await chiamaModello(sessione);
+      risposta = esito.risposta;
+      motore = esito.motore;
+      registraConsumo(sessione, motore, esito.uso);
     } catch (e) {
       const testo = e instanceof ErroreModello ? e.perUtente : 'Si è verificato un problema tecnico. Riprova tra poco.';
-      console.error('[modello]', e.message);
+      console.error('[modello]', e.message.slice(0, 300));
       // Il messaggio del cliente resta nello storico: al prossimo invio il modello lo vedrà.
       eventi.push({ tipo: 'errore', testo });
       return eventi;
@@ -121,7 +125,7 @@ async function rispondi(sessione, testoCliente) {
     const chiamate = risposta.parts.filter((p) => p.functionCall);
     const testo = risposta.parts.filter((p) => p.text && !p.thought).map((p) => p.text).join('\n').trim();
     if (testo) {
-      sessione.trascrizione.push({ chi: 'assistente', testo, quando: new Date().toISOString() });
+      sessione.trascrizione.push({ chi: 'assistente', testo, motore, quando: new Date().toISOString() });
       eventi.push({ tipo: 'messaggio', testo });
     }
     if (!chiamate.length) return eventi;
